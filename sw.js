@@ -1,6 +1,6 @@
 // 离线缓存 Service Worker
 // 策略：预缓存所有资源 + 运行时缓存，先读缓存（快），离线也能玩
-const CACHE = 'puzzle-playground-v1';
+const CACHE = 'puzzle-playground-v2';
 const ASSETS = [
   './',
   './index.html',
