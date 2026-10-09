@@ -1,7 +1,7 @@
 {
   "name": "益智游乐场",
   "short_name": "益智游乐场",
-  "description": "给小学生玩的益智小游戏：口算、记忆翻牌、找规律",
+  "description": "给小学生玩的娱乐小游戏：打地鼠、记忆翻牌、灯光记忆、接水果",
   "lang": "zh-CN",
   "start_url": "./",
   "scope": "./",
