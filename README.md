@@ -7,7 +7,7 @@
 
 | 文件 | 作用 |
 |------|------|
-| `index.html` | 游戏本体（口算大冒险、记忆翻牌、找规律、随机冒险），所有代码都在一个文件里 |
+| `index.html` | 游戏本体（打地鼠、记忆翻牌、灯光记忆、接水果、随机冒险），所有代码都在一个文件里 |
 | `manifest.json` | PWA 配置，让网页可以"添加到主屏幕"变成 App 图标 |
 | `sw.js` | 离线缓存，第一次联网打开后，没网也能继续玩 |
 | `icons/` | App 图标 |
@@ -78,7 +78,7 @@ iPhone 用户需要：
 
 ## 五、自定义
 
-- 改题目难度：编辑 `index.html` 里的 `makeQuestion`（口算）和 `makePattern`（找规律）。
 - 改翻牌动物：编辑 `index.html` 里的 `EMOJIS` 数组。
+- 改打地鼠速度 / 接水果难度：编辑 `index.html` 里的 `MoleGame` / `CatchGame`。
 - 改鼓励语：编辑 `index.html` 里的 `PRAISES` 数组。
 - 改图标颜色：改 `tools/gen-icons.js` 里的 `TOP`/`BOT`/`STAR` 颜色后运行 `node tools/gen-icons.js`。
