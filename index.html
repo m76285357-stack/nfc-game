@@ -1,0 +1,608 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#4a90e2">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" type="image/png" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/icon-180.png">
+<title>🎪 益智游乐场</title>
+<style>
+  :root{
+    --blue:#4a90e2;
+    --pink:#ff6b9d;
+    --orange:#ff8c42;
+    --green:#4ecb71;
+    --purple:#9b6bff;
+    --yellow:#ffd23f;
+    --ink:#3a3a5c;
+    --card:#ffffff;
+    --shadow:0 6px 0 rgba(0,0,0,.12);
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  html,body{margin:0;padding:0;}
+  body{
+    font-family:"Comic Sans MS","PingFang SC","Microsoft YaHei",sans-serif;
+    color:var(--ink);
+    min-height:100vh;
+    background:linear-gradient(160deg,#aee3ff 0%,#d9f2ff 40%,#ffe0f0 100%);
+    overflow-x:hidden;
+    user-select:none;
+  }
+  /* 背景漂浮小装饰 */
+  .bubble{position:fixed;border-radius:50%;opacity:.35;pointer-events:none;z-index:0;animation:floaty 8s ease-in-out infinite;}
+  @keyframes floaty{0%,100%{transform:translateY(0) rotate(0)}50%{transform:translateY(-24px) rotate(12deg)}}
+
+  #confetti{position:fixed;inset:0;pointer-events:none;z-index:999;}
+
+  #app{position:relative;z-index:1;max-width:720px;margin:0 auto;padding:14px 16px 40px;}
+
+  /* 顶部栏 */
+  #topbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;}
+  #btn-home{
+    background:#fff;border:none;border-radius:50%;width:46px;height:46px;font-size:22px;
+    box-shadow:var(--shadow);cursor:pointer;transition:transform .15s;
+  }
+  #btn-home:active{transform:scale(.9);}
+  #star-badge{
+    background:#fff;border-radius:999px;padding:8px 16px;font-size:18px;font-weight:bold;
+    box-shadow:var(--shadow);display:flex;align-items:center;gap:6px;
+  }
+
+  /* 屏幕切换 */
+  .screen{display:none;animation:pop .35s ease;}
+  .screen.active{display:block;}
+  @keyframes pop{from{opacity:0;transform:scale(.96) translateY(8px)}to{opacity:1;transform:none}}
+
+  /* 菜单 */
+  .title{text-align:center;font-size:42px;margin:10px 0 2px;text-shadow:2px 2px 0 rgba(255,255,255,.7);}
+  .subtitle{text-align:center;font-size:17px;margin:0 0 22px;color:#5b5b7a;}
+  .game-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:16px;}
+  .game-card{
+    border:none;border-radius:22px;padding:26px 14px;cursor:pointer;color:#fff;
+    font-size:20px;font-weight:bold;box-shadow:0 6px 0 rgba(0,0,0,.18);
+    transition:transform .15s, box-shadow .15s;text-align:center;line-height:1.4;
+  }
+  .game-card:active{transform:translateY(4px);box-shadow:0 2px 0 rgba(0,0,0,.18);}
+  .game-card .icon{display:block;font-size:46px;margin-bottom:8px;}
+  .game-card .desc{display:block;font-size:13px;font-weight:normal;opacity:.92;margin-top:6px;}
+  .card-blue{background:linear-gradient(135deg,#4a90e2,#6bb1ff);}
+  .card-pink{background:linear-gradient(135deg,#ff6b9d,#ff8fb5);}
+  .card-green{background:linear-gradient(135deg,#35b96a,#6fd89b);}
+  .card-purple{background:linear-gradient(135deg,#9b6bff,#b693ff);}
+
+  /* 游戏通用 HUD */
+  .game-hud{display:flex;justify-content:space-between;align-items:center;background:#fff;border-radius:16px;
+    padding:10px 16px;margin-bottom:18px;font-size:16px;font-weight:bold;box-shadow:var(--shadow);}
+  .hud-pill{background:#f3f6ff;border-radius:999px;padding:6px 12px;}
+  #combo{color:var(--orange);}
+
+  .quiz-card{background:#fff;border-radius:24px;padding:26px 20px;box-shadow:var(--shadow);}
+  .big-question{text-align:center;font-size:54px;font-weight:bold;margin:10px 0 24px;letter-spacing:2px;min-height:64px;}
+  .options-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:14px;}
+  .opt-btn{
+    border:3px solid #e8ecf8;background:#f8faff;border-radius:16px;padding:18px 8px;
+    font-size:28px;font-weight:bold;color:var(--ink);cursor:pointer;transition:transform .12s, background .12s;
+  }
+  .opt-btn:active{transform:scale(.94);}
+  .opt-btn.correct{background:#d6f5e0;border-color:var(--green);animation:shake .4s;}
+  .opt-btn.wrong{background:#ffe3e3;border-color:#ff7a7a;animation:shake .4s;}
+  @keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}
+
+  .feedback{text-align:center;font-size:30px;min-height:44px;margin-top:18px;font-weight:bold;}
+
+  /* 记忆翻牌 */
+  .memory-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;perspective:900px;}
+  .card{aspect-ratio:1;cursor:pointer;}
+  .card-inner{position:relative;width:100%;height:100%;transition:transform .45s;transform-style:preserve-3d;}
+  .card.flipped .card-inner,.card.matched .card-inner{transform:rotateY(180deg);}
+  .card-face{position:absolute;inset:0;backface-visibility:hidden;-webkit-backface-visibility:hidden;border-radius:14px;
+    display:flex;align-items:center;justify-content:center;box-shadow:var(--shadow);}
+  .card-back{background:linear-gradient(135deg,#9b6bff,#c29bff);font-size:30px;color:#fff;}
+  .card-front{background:#fff;transform:rotateY(180deg);font-size:40px;border:3px solid #e8ecf8;}
+  .card.matched .card-front{background:#eafff1;border-color:var(--green);animation:pulse .5s;}
+  @keyframes pulse{0%{transform:rotateY(180deg) scale(1)}50%{transform:rotateY(180deg) scale(1.15)}100%{transform:rotateY(180deg) scale(1)}}
+
+  /* 结算 */
+  .result-card{background:#fff;border-radius:28px;padding:36px 24px;text-align:center;box-shadow:var(--shadow);}
+  .result-emoji{font-size:70px;margin:0;}
+  .result-stars{font-size:46px;margin:10px 0;letter-spacing:6px;}
+  .result-stars .off{filter:grayscale(1);opacity:.3;}
+  .result-msg{font-size:20px;margin:6px 0 26px;color:#5b5b7a;}
+  .btn-big{
+    display:block;width:100%;border:none;border-radius:16px;padding:16px;margin:10px 0;
+    font-size:20px;font-weight:bold;color:#fff;cursor:pointer;box-shadow:var(--shadow);
+    transition:transform .15s, box-shadow .15s;
+  }
+  .btn-big:active{transform:translateY(3px);box-shadow:0 3px 0 rgba(0,0,0,.15);}
+  .btn-primary{background:linear-gradient(135deg,#ff8c42,#ffa766);}
+  .btn-ghost{background:#eef1f8;color:var(--ink);}
+
+  .game-title{text-align:center;font-size:26px;margin:4px 0 16px;font-weight:bold;}
+  .tip{text-align:center;font-size:14px;color:#6b6b8a;margin-bottom:14px;}
+
+  @media (max-width:480px){
+    .title{font-size:34px;}
+    .big-question{font-size:44px;}
+    .card-front{font-size:30px;}
+  }
+</style>
+</head>
+<body>
+<canvas id="confetti"></canvas>
+
+<div id="app">
+  <div id="topbar">
+    <button id="btn-home" title="返回主页">🏠</button>
+    <div id="star-badge">⭐ <span id="totalStars">0</span></div>
+  </div>
+
+  <!-- 菜单 -->
+  <section id="screen-menu" class="screen active">
+    <h1 class="title">🎪 益智游乐场</h1>
+    <p class="subtitle">选一个好玩的小游戏吧！</p>
+    <div class="game-grid">
+      <button class="game-card card-blue" data-game="math">
+        <span class="icon">🧮</span>口算大冒险
+        <span class="desc">算一算，打败题目怪兽</span>
+      </button>
+      <button class="game-card card-pink" data-game="memory">
+        <span class="icon">🃏</span>记忆翻牌
+        <span class="desc">找到相同的动物朋友</span>
+      </button>
+      <button class="game-card card-green" data-game="pattern">
+        <span class="icon">🔍</span>找规律
+        <span class="desc">猜猜下一个是什么？</span>
+      </button>
+      <button class="game-card card-purple" data-game="random">
+        <span class="icon">🎲</span>随机冒险
+        <span class="desc">来点惊喜吧！</span>
+      </button>
+    </div>
+  </section>
+
+  <!-- 口算大冒险 -->
+  <section id="screen-math" class="screen">
+    <div class="game-title">🧮 口算大冒险</div>
+    <div class="game-hud">
+      <span class="hud-pill">第 <span id="math-qnum">1</span>/10 题</span>
+      <span id="combo"></span>
+      <span class="hud-pill">⭐ <span id="math-score">0</span></span>
+    </div>
+    <div class="quiz-card">
+      <div id="math-question" class="big-question">?</div>
+      <div id="math-options" class="options-grid"></div>
+      <div id="math-feedback" class="feedback"></div>
+    </div>
+  </section>
+
+  <!-- 记忆翻牌 -->
+  <section id="screen-memory" class="screen">
+    <div class="game-title">🃏 记忆翻牌</div>
+    <div class="game-hud">
+      <span class="hud-pill">⏱ <span id="mem-time">0</span> 秒</span>
+      <span class="hud-pill">翻牌 <span id="mem-moves">0</span> 次</span>
+    </div>
+    <p class="tip">翻开两张一样的动物卡片就能消除，找出所有配对！</p>
+    <div id="memory-grid" class="memory-grid"></div>
+  </section>
+
+  <!-- 找规律 -->
+  <section id="screen-pattern" class="screen">
+    <div class="game-title">🔍 找规律</div>
+    <div class="game-hud">
+      <span class="hud-pill">第 <span id="pat-qnum">1</span>/8 题</span>
+      <span id="combo"></span>
+      <span class="hud-pill">⭐ <span id="pat-score">0</span></span>
+    </div>
+    <div class="quiz-card">
+      <div id="pat-question" class="big-question">?</div>
+      <div id="pat-options" class="options-grid"></div>
+      <div id="pat-feedback" class="feedback"></div>
+    </div>
+  </section>
+
+  <!-- 结算 -->
+  <section id="screen-result" class="screen">
+    <div class="result-card">
+      <p class="result-emoji" id="result-emoji">🎉</p>
+      <div class="result-stars" id="result-stars"></div>
+      <p class="result-msg" id="result-msg"></p>
+      <button class="btn-big btn-primary" id="btn-replay">🔄 再玩一次</button>
+      <button class="btn-big btn-ghost" id="btn-result-home">🏠 返回主页</button>
+    </div>
+  </section>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  /* ===== 小工具 ===== */
+  const $ = id => document.getElementById(id);
+  function randInt(min,max){ return Math.floor(Math.random()*(max-min+1))+min; }
+  function shuffle(arr){ for(let i=arr.length-1;i>0;i--){ const j=randInt(0,i); [arr[i],arr[j]]=[arr[j],arr[i]]; } return arr; }
+  const PRAISES = ["太棒了！🌟","真聪明！","好厉害呀！","你真棒！","了不起！","答对啦！","漂亮！","太厉害了！"];
+
+  const state = {
+    screen:"menu",
+    totalStars:0,
+    currentGame:null,
+    memoryTimer:null,
+    mathLock:false,
+    patLock:false,
+    memLock:false,
+  };
+
+  /* ===== 音效（Web Audio） ===== */
+  let audioCtx = null;
+  function ensureAudio(){
+    if(!audioCtx){
+      const AC = window.AudioContext || window.webkitAudioContext;
+      if(AC) audioCtx = new AC();
+    }
+  }
+  function beep(freq,dur,type,vol,when){
+    if(!audioCtx) return;
+    const o = audioCtx.createOscillator();
+    const g = audioCtx.createGain();
+    o.type = type||"sine"; o.frequency.value = freq;
+    g.gain.value = vol==null?0.2:vol;
+    o.connect(g); g.connect(audioCtx.destination);
+    const t = audioCtx.currentTime + (when||0);
+    o.start(t); o.stop(t+dur);
+  }
+  const sfx = {
+    click(){ ensureAudio(); beep(600,.08,"triangle",.15); },
+    correct(){ ensureAudio(); beep(523,.12,"sine",.22); beep(659,.12,"sine",.22,.1); beep(784,.2,"sine",.22,.2); },
+    wrong(){ ensureAudio(); beep(220,.25,"sawtooth",.12); },
+    flip(){ ensureAudio(); beep(400,.06,"triangle",.12); },
+    match(){ ensureAudio(); beep(660,.1,"sine",.2); beep(880,.15,"sine",.2,.1); },
+    win(){ ensureAudio(); [523,659,784,1047].forEach((f,i)=>beep(f,.18,"sine",.22,i*.12)); },
+  };
+
+  /* ===== 撒花 ===== */
+  const cvs = $("confetti"), ctx = cvs.getContext("2d");
+  let parts = [], confettiRunning = false;
+  function resizeCvs(){ cvs.width = innerWidth; cvs.height = innerHeight; }
+  window.addEventListener("resize", resizeCvs); resizeCvs();
+  function launchConfetti(n){
+    const colors = ["#ff6b9d","#ff8c42","#ffd23f","#4ecb71","#4a90e2","#9b6bff"];
+    for(let i=0;i<(n||80);i++){
+      parts.push({
+        x:randInt(0,cvs.width), y:-20-randInt(0,80),
+        w:randInt(6,12), h:randInt(8,16),
+        color:colors[randInt(0,colors.length-1)],
+        vy:randInt(20,50)/10, vx:(Math.random()-.5)*3, rot:Math.random()*Math.PI, vr:(Math.random()-.5)*.3,
+      });
+    }
+    if(!confettiRunning){ confettiRunning=true; requestAnimationFrame(drawConfetti); }
+  }
+  function drawConfetti(){
+    ctx.clearRect(0,0,cvs.width,cvs.height);
+    parts.forEach(p=>{
+      p.x+=p.vx; p.y+=p.vy; p.rot+=p.vr;
+      ctx.save(); ctx.translate(p.x,p.y); ctx.rotate(p.rot);
+      ctx.fillStyle=p.color; ctx.fillRect(-p.w/2,-p.h/2,p.w,p.h);
+      ctx.restore();
+    });
+    parts = parts.filter(p=>p.y<cvs.height+30);
+    if(parts.length){ requestAnimationFrame(drawConfetti); }
+    else{ confettiRunning=false; ctx.clearRect(0,0,cvs.width,cvs.height); }
+  }
+
+  /* ===== 屏幕切换 ===== */
+  function showScreen(name){
+    document.querySelectorAll(".screen").forEach(s=>s.classList.remove("active"));
+    $("screen-"+name).classList.add("active");
+    state.screen = name;
+    if(state.memoryTimer){ clearInterval(state.memoryTimer); state.memoryTimer=null; }
+    $("btn-home").style.display = (name==="menu") ? "none" : "block";
+    $("star-badge").style.display = (name==="menu") ? "flex" : "none";
+  }
+
+  /* ===== 星星存档 ===== */
+  function loadStars(){
+    try{ state.totalStars = parseInt(localStorage.getItem("puzzle_playground_stars")||"0",10)||0; }
+    catch(e){ state.totalStars = 0; }
+    $("totalStars").textContent = state.totalStars;
+  }
+  function saveStars(){ try{ localStorage.setItem("puzzle_playground_stars", String(state.totalStars)); }catch(e){} }
+
+  /* ===== 通用：结果页 ===== */
+  function showResult(emoji, stars, msg){
+    $("result-emoji").textContent = emoji;
+    let html = "";
+    for(let i=1;i<=3;i++) html += (i<=stars) ? "⭐" : '<span class="off">⭐</span>';
+    $("result-stars").innerHTML = html;
+    $("result-msg").textContent = msg;
+    state.totalStars += stars;
+    saveStars(); $("totalStars").textContent = state.totalStars;
+    if(stars>=2){ launchConfetti(80 + stars*40); sfx.win(); }
+    showScreen("result");
+  }
+
+  /* =========================================================
+     游戏一：口算大冒险
+  ========================================================= */
+  const MathGame = {
+    qIndex:0, score:0, combo:0,
+    start(){
+      state.currentGame = "math";
+      this.qIndex=0; this.score=0; this.combo=0;
+      $("math-score").textContent="0"; $("combo").textContent="";
+      showScreen("math");
+      this.next();
+    },
+    next(){
+      if(this.qIndex>=10){ this.finish(); return; }
+      $("math-qnum").textContent = this.qIndex+1;
+      this.current = this.makeQuestion(this.qIndex);
+      $("math-question").textContent = this.current.text;
+      $("math-feedback").textContent = "";
+      const opts = $("math-options");
+      opts.innerHTML="";
+      this.current.options.forEach(o=>{
+        const b=document.createElement("button");
+        b.className="opt-btn"; b.textContent=o;
+        b.addEventListener("click",()=>this.answer(o,b));
+        opts.appendChild(b);
+      });
+    },
+    makeQuestion(i){
+      // 难度随题目序号递增
+      const r = Math.random();
+      let a,b,ans,op,text;
+      if(i<3){ // 简单
+        if(r<.4){ op="+"; a=randInt(12,50); b=randInt(11,49); ans=a+b; }
+        else if(r<.7){ op="−"; a=randInt(30,60); b=randInt(11,a-5); ans=a-b; }
+        else { op="×"; a=randInt(2,6); b=randInt(3,6); ans=a*b; }
+      } else if(i<7){ // 中等
+        if(r<.3){ op="+"; a=randInt(30,99); b=randInt(20,90); ans=a+b; }
+        else if(r<.55){ op="−"; a=randInt(50,99); b=randInt(20,a-10); ans=a-b; }
+        else if(r<.8){ op="×"; a=randInt(3,9); b=randInt(3,9); ans=a*b; }
+        else { b=randInt(3,9); const q=randInt(3,9); a=b*q; op="÷"; ans=q; }
+      } else { // 较难
+        if(r<.3){ op="+"; a=randInt(60,199); b=randInt(40,180); ans=a+b; }
+        else if(r<.55){ op="−"; a=randInt(90,200); b=randInt(40,a-20); ans=a-b; }
+        else if(r<.8){ op="×"; a=randInt(4,12); b=randInt(4,9); ans=a*b; }
+        else { b=randInt(4,9); const q=randInt(4,9); a=b*q; op="÷"; ans=q; }
+      }
+      text = a+" "+op+" "+b+" = ?";
+      return { text, answer:ans, options:this.makeOptions(ans) };
+    },
+    makeOptions(ans){
+      const set = new Set([ans]);
+      while(set.size<4){
+        let d = ans + randInt(-10,10);
+        if(d<0) d = ans + randInt(2,9);
+        set.add(d);
+      }
+      return shuffle([...set]);
+    },
+    answer(picked,btn){
+      if(state.mathLock) return;
+      const correct = picked === this.current.answer;
+      state.mathLock = true;
+      if(correct){
+        this.score++; this.combo++;
+        sfx.correct();
+        btn.classList.add("correct");
+        $("math-feedback").textContent = this.combo>=3 ? "连对 "+this.combo+"！🔥" : PRAISES[randInt(0,PRAISES.length-1)];
+      } else {
+        this.combo=0;
+        sfx.wrong();
+        btn.classList.add("wrong");
+        [...$("math-options").children].forEach(b=>{ if(+b.textContent===this.current.answer) b.classList.add("correct"); });
+        $("math-feedback").textContent = "正确答案是 "+this.current.answer+"，加油！";
+      }
+      $("math-score").textContent = this.score;
+      $("combo").textContent = this.combo>=2 ? "🔥×"+this.combo : "";
+      setTimeout(()=>{ state.mathLock=false; this.qIndex++; this.next(); }, correct?750:1500);
+    },
+    finish(){
+      const pct = this.score/10;
+      let stars = pct===1?3 : pct>=.8?3 : pct>=.6?2 : 1;
+      const msg = pct===1 ? "满分！你是口算小天才！🏆" : pct>=.8 ? "非常棒！继续加油！" : pct>=.6 ? "不错哦，再练练更厉害！" : "没关系，多多练习就会变强！";
+      showResult("🧮", stars, "答对 "+this.score+"/10 · "+msg);
+    },
+  };
+
+  /* =========================================================
+     游戏二：记忆翻牌
+  ========================================================= */
+  const EMOJIS = ["🐶","🐱","🦊","🐼","🐸","🦁","🐵","🐰"];
+  const MemoryGame = {
+    first:null, moves:0, matched:0, seconds:0,
+    start(){
+      state.currentGame = "memory";
+      this.first=null; this.moves=0; this.matched=0; this.seconds=0;
+      $("mem-moves").textContent="0"; $("mem-time").textContent="0";
+      showScreen("memory");
+      this.build();
+      state.memoryTimer = setInterval(()=>{ this.seconds++; $("mem-time").textContent=this.seconds; },1000);
+    },
+    build(){
+      const grid = $("memory-grid");
+      grid.innerHTML="";
+      const cards = shuffle([...EMOJIS, ...EMOJIS]);
+      cards.forEach(emo=>{
+        const card=document.createElement("div");
+        card.className="card"; card.dataset.emo=emo;
+        card.innerHTML = '<div class="card-inner"><div class="card-face card-back">❓</div><div class="card-face card-front">'+emo+'</div></div>';
+        card.addEventListener("click",()=>this.flip(card));
+        grid.appendChild(card);
+      });
+    },
+    flip(card){
+      if(state.memLock || card.classList.contains("flipped") || card.classList.contains("matched")) return;
+      sfx.flip();
+      card.classList.add("flipped");
+      if(!this.first){ this.first = card; return; }
+      // 第二张
+      this.moves++; $("mem-moves").textContent = this.moves;
+      const a=this.first, b=card;
+      if(a.dataset.emo===b.dataset.emo){
+        a.classList.add("matched"); b.classList.add("matched");
+        this.matched++; sfx.match(); this.first=null;
+        if(this.matched===EMOJIS.length){ this.finish(); }
+      } else {
+        state.memLock=true;
+        this.first=null;
+        setTimeout(()=>{
+          a.classList.remove("flipped"); b.classList.remove("flipped");
+          state.memLock=false;
+        },750);
+      }
+    },
+    finish(){
+      clearInterval(state.memoryTimer); state.memoryTimer=null;
+      // 依据用时和翻牌次数评星
+      const total = EMOJIS.length;
+      const stars = this.moves<=total+3 ? 3 : this.moves<=total*2 ? 2 : 1;
+      const msg = stars===3 ? "记忆力超强！🐘" : stars===2 ? "很不错，再快一点更棒！" : "动脑筋想一想，你行的！";
+      showResult("🃏", stars, "用了 "+this.seconds+" 秒、翻牌 "+this.moves+" 次 · "+msg);
+    },
+  };
+
+  /* =========================================================
+     游戏三：找规律
+  ========================================================= */
+  const PatternGame = {
+    qIndex:0, score:0, combo:0,
+    start(){
+      state.currentGame = "pattern";
+      this.qIndex=0; this.score=0; this.combo=0;
+      $("pat-score").textContent="0"; $("combo").textContent="";
+      showScreen("pattern");
+      this.next();
+    },
+    next(){
+      if(this.qIndex>=8){ this.finish(); return; }
+      $("pat-qnum").textContent = this.qIndex+1;
+      this.current = this.makePattern();
+      $("pat-question").textContent = this.current.terms.join("，")+"，？";
+      $("pat-feedback").textContent="";
+      const opts = $("pat-options");
+      opts.innerHTML="";
+      this.current.options.forEach(o=>{
+        const b=document.createElement("button");
+        b.className="opt-btn"; b.textContent=o;
+        b.addEventListener("click",()=>this.answer(o,b));
+        opts.appendChild(b);
+      });
+    },
+    makePattern(){
+      const r = Math.random();
+      let terms=[], ans;
+      if(r<.45){ // 递增等差
+        const start=randInt(1,12), step=randInt(2,9);
+        for(let k=0;k<4;k++) terms.push(start+step*k);
+        ans=terms[3]+step;
+      } else if(r<.7){ // 递减等差
+        const step=randInt(2,8);
+        const start=step*4+randInt(0,15);
+        for(let k=0;k<4;k++) terms.push(start-step*k);
+        ans=terms[3]-step;
+      } else if(r<.85){ // 倍数
+        const start=randInt(1,4), ratio=(Math.random()<.5?2:3);
+        for(let k=0;k<4;k++) terms.push(start*Math.pow(ratio,k));
+        ans=terms[3]*ratio;
+      } else { // 每次多加 2（步长递增）
+        const start=randInt(1,6);
+        let cur=start, delta=randInt(1,3);
+        terms=[];
+        for(let k=0;k<4;k++){ terms.push(cur); cur+=delta; delta+=2; }
+        ans=cur;
+      }
+      return { terms, answer:ans, options:this.makeOptions(ans) };
+    },
+    makeOptions(ans){
+      const set=new Set([ans]);
+      while(set.size<4){
+        let d=ans+randInt(-8,8);
+        if(d<0) d=ans+randInt(2,8);
+        set.add(d);
+      }
+      return shuffle([...set]);
+    },
+    answer(picked,btn){
+      if(state.patLock) return;
+      const correct = picked===this.current.answer;
+      state.patLock=true;
+      if(correct){
+        this.score++; this.combo++; sfx.correct();
+        btn.classList.add("correct");
+        $("pat-feedback").textContent = this.combo>=3 ? "连对 "+this.combo+"！🔥" : PRAISES[randInt(0,PRAISES.length-1)];
+      } else {
+        this.combo=0; sfx.wrong();
+        btn.classList.add("wrong");
+        [...$("pat-options").children].forEach(b=>{ if(+b.textContent===this.current.answer) b.classList.add("correct"); });
+        $("pat-feedback").textContent="正确答案是 "+this.current.answer+"，再想想！";
+      }
+      $("pat-score").textContent=this.score;
+      $("combo").textContent = this.combo>=2 ? "🔥×"+this.combo : "";
+      setTimeout(()=>{ state.patLock=false; this.qIndex++; this.next(); }, correct?750:1600);
+    },
+    finish(){
+      const pct=this.score/8;
+      const stars = pct===1?3 : pct>=.8?3 : pct>=.6?2 : 1;
+      const msg = pct===1 ? "观察力满分！🔍" : pct>=.8 ? "很会找规律！" : pct>=.6 ? "不错，眼睛再尖一点！" : "别灰心，多看看就发现啦！";
+      showResult("🔍", stars, "答对 "+this.score+"/8 · "+msg);
+    },
+  };
+
+  /* ===== 事件绑定 ===== */
+  document.querySelectorAll(".game-card").forEach(card=>{
+    card.addEventListener("click",()=>{
+      sfx.click();
+      const g = card.dataset.game;
+      if(g==="random"){ const list=["math","memory","pattern"]; const pick=list[randInt(0,2)];
+        if(pick==="math") MathGame.start(); else if(pick==="memory") MemoryGame.start(); else PatternGame.start();
+      } else if(g==="math") MathGame.start();
+      else if(g==="memory") MemoryGame.start();
+      else if(g==="pattern") PatternGame.start();
+    });
+  });
+
+  $("btn-home").addEventListener("click",()=>{ sfx.click(); showScreen("menu"); });
+  $("btn-replay").addEventListener("click",()=>{
+    sfx.click();
+    if(state.currentGame==="math") MathGame.start();
+    else if(state.currentGame==="memory") MemoryGame.start();
+    else PatternGame.start();
+  });
+  $("btn-result-home").addEventListener("click",()=>{ sfx.click(); showScreen("menu"); });
+
+  /* ===== 背景漂浮气泡 ===== */
+  const bubbleColors=["#ffd23f","#ff8fb5","#8fd8ff","#9bffb0","#d4b6ff"];
+  for(let i=0;i<9;i++){
+    const b=document.createElement("div");
+    b.className="bubble";
+    const s=randInt(20,60);
+    b.style.width=s+"px"; b.style.height=s+"px";
+    b.style.left=randInt(2,95)+"%";
+    b.style.top=randInt(5,90)+"%";
+    b.style.background=bubbleColors[i%bubbleColors.length];
+    b.style.animationDuration=(6+Math.random()*6)+"s";
+    b.style.animationDelay=(-Math.random()*8)+"s";
+    document.body.appendChild(b);
+  }
+
+  /* ===== 初始化 ===== */
+  loadStars();
+})();
+</script>
+<script>
+  // 注册离线缓存（PWA），第一次联网打开后即可离线游玩
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', function () {
+      navigator.serviceWorker.register('sw.js').catch(function (err) {
+        console.log('Service Worker 注册失败', err);
+      });
+    });
+  }
+</script>
+</body>
+</html>
